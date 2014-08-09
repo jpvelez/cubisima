@@ -4,3 +4,6 @@ raw/
 # Drake stuff
 .drake
 drake.log
+
+# Mac OSX stuff
+.DS_Store
