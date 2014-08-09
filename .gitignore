@@ -1,6 +1,9 @@
 # Data
 raw/
 
+# Logs
+*.log
+
 # Drake stuff
 .drake
 drake.log
