@@ -1,0 +1,8 @@
+
+
+; Get real estate listing pages from Cubisima.com
+raw/listings/ <- [-timecheck]
+	python get_vivienda_listings.py $OUTPUT
+
+
+; Get individual real estate listings.
