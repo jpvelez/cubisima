@@ -1,8 +1,10 @@
+; Run this file to scrape all real estate listings on Cubisima.com.
 
+; Define data dirs
+LISTING_PAGES_DIR="raw/listing_pages/"
+LISTINGS_DIR="raw/listings/"
 
 ; Get real estate listing pages from Cubisima.com
-raw/listings/ <- [-timecheck]
-	python get_vivienda_listings.py $OUTPUT
-
-
-; Get individual real estate listings.
+raw/listing_pages/complete <- [-timecheck]
+	python get_listing_pages.py $LISTING_PAGES_DIR
+	touch $OUTPUT
