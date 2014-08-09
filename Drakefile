@@ -8,3 +8,8 @@ LISTINGS_DIR="raw/listings/"
 raw/listing_pages/complete <- [-timecheck]
 	python get_listing_pages.py $LISTING_PAGES_DIR
 	touch $OUTPUT
+
+; Get individual real estate listings.
+raw/listings/complete <- raw/listing_pages/complete
+	mkdir -p $LISTINGS_DIR
+	ls $LISTING_PAGES_DIR | xargs python get_listings_from_listing_page.py $LISTING_PAGES_DIR $LISTINGS_DIR && touch $OUTPUT
