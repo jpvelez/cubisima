@@ -6,7 +6,7 @@ import sys
 import os
 import time
 import logging
-logging.getLogger().setLevel(logging.INFO)
+logging.basicConfig(filename='scraper.log',level=logging.INFO)
 
 import requests
 from bs4 import BeautifulSoup

@@ -6,6 +6,8 @@ import sys
 import os
 import time
 import datetime
+import logging
+logging.basicConfig(filename='scraper.log',level=logging.INFO)
 
 import requests
 from bs4 import BeautifulSoup
@@ -28,21 +30,19 @@ def page_has_listings(listings_page):
 
 def main(listings_dir):
 
-	print >> sys.stderr, listings_dir	
-
 	# Make dir for listing pages.
 	if not os.path.exists(listings_dir):
 		print 'making %s' % listings_dir
 		os.makedirs(listings_dir)
 
 	today_date = datetime.date.today().strftime('%d%m%Y')
-	for page_id in range(0,10):
+	for page_id in range(0,100000):
 
 		# Paginate from earliest date to today.
 		listings_page_url = 'http://www.cubisima.com/casas/anuncios/%s/?fdate=08072010&sdate=%s' % (page_id, today_date)
 
 		# Fetch listings page.
-		print >> sys.stderr, 'Fetching %s' % listings_page_url
+		logging.info('Fetching %s' % listings_page_url)
 		listings_page = requests.get(listings_page_url).text
 
 		# Save HTML to disk.
@@ -54,8 +54,10 @@ def main(listings_dir):
 		# New listings are added every day, so older listings 
 		# are pushed to higher-numbered pages. 
 		if not page_has_listings(listings_page):
+			logging.info('This page has no listings. Stopping the fetch.')
 			break
 
+		# Don't be a sociopath.
 		time.sleep(2)
 
 if __name__ == '__main__':
