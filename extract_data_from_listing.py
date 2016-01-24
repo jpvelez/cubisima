@@ -6,20 +6,54 @@
 import sys
 import logging
 from bs4 import BeautifulSoup
+import csv
 
 logging.basicConfig(filename='scraper.log', level=logging.INFO)
 
 
-def extract_description_fields(description_table):
+def get_pub_date_if_modified(listing):
+    '''
+    Helper function to get pub date in rare case
+    that modification date is present.
+    Basically a necessary workaround due to poorly formatted html.
+    '''
+    for text in listing.find_all(text=True):
+        if 'Publicado:\xa0' in text:  # Should catch all cases.
+            return text.split()[1]
+
+
+def get_field_from_tag_id(table, tag_id, listing_has_photos):
+    # Listings with photos have same table tag ids,
+    # save for no 0 at the end. ¯\_(ツ)_/¯
+    if listing_has_photos:
+        tag_id = tag_id.replace('0', '')
+    tag = table.find(id=tag_id)
+    # Most table rows separate field name from field value with a '\xa0' char,
+    # some kind of unicode whitespace. Split on it to get field value.
+    tag_text = tag.text.split(u'\xa0')[1]
+    # Missing values are usually represented with '-' strings.
+    if ('-' in tag_text or tag_text == '') \
+       and 'Observaciones' not in tag_id:
+        return None
+    else:
+        return tag_text
+
+
+def extract_description_fields(listing):
     """
     Extract property type, number of bed and bath, and other features from
     the property descriptions section of a Cubisima listing.
-    """
-    # Parse first table row - property type, numbed of bedrooms, bathrooms.
-    # String to parse: "<b>Casa</b> 4 cuartos, 2 banos"
-    property_type_bed_bath_tag = description_table.find(id='MainPlaceHolder_LabelBasicInfo0')
 
-    print(property_type_bed_bath_tag.text)
+    Note: MainPlaceHolder_LabelCantPers0 and MainPlaceHolder_LabelEstado0
+    tags appear to always be empty.
+    """
+    description_table = listing.find(id='casa_detalles_sinfoto_izquierda')
+    listing_has_photos = False
+
+    # TODO: SHOULD THIS BREAK LOUDLY IF IT CAN'T FIND TAGS OR TEXT?
+    # Parse first table row - property type, numbed of bedrooms, bathrooms.
+    # Text to parse: "<b>Casa</b> 4 cuartos, 2 banos"
+    property_type_bed_bath_tag = description_table.find(id='MainPlaceHolder_LabelBasicInfo0')
 
     # Get property type.
     # Extract property type from bold section tag text.
@@ -31,100 +65,89 @@ def extract_description_fields(description_table):
     num_bath = int(num_bed_and_bath_string.split()[2])
 
     # Parse price (second) table field.
-    # String to parse: "Precio: 40,000 cuc"
-    property_price_tag = description_table.find(id='MainPlaceHolder_LabelPrecio0') 
-    propety_price_text = property_price_tag.text.split(u'\xa0')[1]
-    if u'-' in propety_price_text:
-        property_price = None
-    else:
-        property_price = float(propety_price_text.replace(',', '')) 
+    # Text to parse: "Precio: 40,000 cuc"
+    price_id = 'MainPlaceHolder_LabelPrecio0'
+    price = get_field_from_tag_id(description_table, price_id, listing_has_photos)
 
-
-
-    # Parse meters^2 field.
-    # TODO: do this
-    # Extract property price from this kind of string: "Construccion: -" or "Construccion: Anos 50"
+    # Parse meters² field.
+    # Text to parse: "Metros²: 235"
     # meters_squared_tag = description_table.find(id='MainPlaceHolder_LabelMetros0')
-    # meters_squared_text = meters_squared_tag.text.split(u'Construcci\xf3n:')[1]
-    # if meters_squared_text == u'\xa0-':
-    #   meters_squared = None
+    # meters_squared_text = meters_squared_tag.text.split('\xa0')[1]
+    # if meters_squared_text == '-':
+    #    meters_squared = None
     # else:
-    #   meters_squared = meters_squared_text
+    #    meters_squared = meters_squared_text
+    meters_squared_id = 'MainPlaceHolder_LabelMetros0'
+    meters_squared = get_field_from_tag_id(description_table, meters_squared_id, listing_has_photos)
 
-
-    # Parse published on date field.
-    # TODO: do this
-    # Extract property price from this kind of string: "Construccion: -" or "Construccion: Anos 50"
-    # meters_squared_tag = description_table.find(id='MainPlaceHolder_LabelPublicado0')
-    # meters_squared_text = meters_squared_tag.text.split(u'Construcci\xf3n:')[1]
-    # if meters_squared_text == u'\xa0-':
-    #   meters_squared = None
+    # Parse construction era field.
+    # Text to parse: "Construccion: Anos 50"
+    # construction_era_tag = description_table.find(id='MainPlaceHolder_LabelAnoSF')
+    # construction_era_text = construction_era_tag.text.split('\xa0')[1]
+    # if construction_era_text == '-':
+    #     construction_era = None
     # else:
-    #   meters_squared = meters_squared_text
-
-
-    # Parse construction year field.
-    # Extract property price from this kind of string: "Construccion: -" or "Construccion: Anos 50"
-    construction_year_tag = description_table.find(id='MainPlaceHolder_LabelAnoSF')
-    construction_year_text = construction_year_tag.text.split(u'Construcci\xf3n:')[1]
-    if construction_year_text == u'\xa0-':
-        construction_year = None
-    else:
-        construction_year = construction_year_text
-
-
-    # Parse ? field.
-    # TODO: implement this conditionally, not all listings have them.
-    # property_type_bed_bath_tag = description_table.find(id='MainPlaceHolder_LabelCantPers0')
-
-    # Parse ? field.
-    # TODO: implement this conditionally, not all listings have them.
-    # property_type_bed_bath_tag = description_table.find(id='MainPlaceHolder_LabelEstado0')
+    #     construction_era = construction_era_text
+    construction_era_id = 'MainPlaceHolder_LabelAnoSF'
+    construction_era = get_field_from_tag_id(description_table, construction_era_id, listing_has_photos)
 
     # Parse location field.
     # Extract property price from this kind of string: "en Habana Vieja, La Habana"
-    location_tag = description_table.find(id='MainPlaceHolder_LabelDireccion0')
-    location_text = location_tag.text.split(u'Direcci\xf3n:\xa0')[1].strip().split(' en ')
-    if len(location_text) > 1:
-        address = location_text[0]
-        location = location_text[1]
-    else:
-        address = None
-        location = location_text[0].replace('en ', '')
+    # location_tag = description_table.find(id='MainPlaceHolder_LabelDireccion0')
+    # location_text = location_tag.text.split('\xa0')[1]
+    # if location_text == '-':
+    #    location = None
+    # else:
+    #    location = location_text
+    location_id = 'MainPlaceHolder_LabelDireccion0'
+    location = get_field_from_tag_id(description_table, location_id, listing_has_photos)
 
-    print(location)
-    print(address)
+    # Extract "near to" field.
+    # Text to parse: "Cerca De: "
+    # near_to_tag = description_table.find(id='MainPlaceHolder_LabelCercaDe0')
+    # near_to_text = near_to_tag.text.split('\xa0')[1]
+    # if near_to_text == '':
+    #     near_to = None
+    # else:
+    #     near_to = near_to_text
+    near_to_id = 'MainPlaceHolder_LabelCercaDe0'
+    near_to = get_field_from_tag_id(description_table, near_to_id, listing_has_photos)
 
-    # Parse "near to" table field.
-    # Extract property price from this kind of string: "Cerca De: "
-    near_to_tag = description_table.find(id='MainPlaceHolder_LabelCercaDe0')
-    near_to_text = near_to_tag.text.split(u'De:\xa0')[1]
-    if near_to_text == '':
-        near_to = None
-    else:
-        near_to = near_to_text
+    # Parse published on date and optional modified on fields.
+    date_id = 'MainPlaceHolder_LabelPublicado0'
+    date_field = get_field_from_tag_id(description_table, date_id, listing_has_photos)
+    # In most cases, date_field is the publication date.
+    # However, when "Modificado": field present, a poorly formatted </br> tag
+    # somehow eliminates "Publicado: <date>" text.
+    # date_field actually catches the modification date,
+    # and publication date must be plucked from raw html, not parsed tree.
+    modified = False
+    mod_date = None
+    pub_date = date_field
+    if 'Modificado:' in listing.text:
+        modified = True
+        mod_date = date_field
+        pub_date = get_pub_date_if_modified(listing)
 
-    # Parse modified? field.
-    # TODO: implement this conditionally, not all listings have them.
-    # tk = description_table.find(id='TK')
-
-    # Parse free text "observations" field.
-    # Extract property price from this kind of string: "TK"
-    notes_tag = description_table.find(id='MainPlaceHolder_LabelObservaciones0')
-    notes = notes_tag.text.split(u'Observaciones:\xa0')[1]
+    # Parse free text "observaciones" field.
+    # notes_tag = description_table.find(id='MainPlaceHolder_LabelObservaciones0')
+    # notes = notes_tag.text.split('\xa0')[1]
+    notes_id = 'MainPlaceHolder_LabelObservaciones0'
+    notes = get_field_from_tag_id(description_table, notes_id, listing_has_photos)
 
     # Save out features.
     description_fields = {}
     description_fields['property_type'] = property_type
     description_fields['num_bed'] = num_bed
     description_fields['num_bath'] = num_bath
-    description_fields['property_price'] = property_price
-    # meters squared?
-    description_fields['construction_year'] = construction_year
-    description_fields['address'] = address
+    description_fields['price'] = price
+    description_fields['meters_squared'] = meters_squared
+    description_fields['construction_era'] = construction_era
     description_fields['location'] = location
     description_fields['near_to'] = near_to
-    # pub date?
+    description_fields['pub_date'] = pub_date
+    description_fields['mod_date'] = mod_date
+    description_fields['modified'] = modified
     description_fields['notes'] = notes
 
     return description_fields
@@ -142,37 +165,41 @@ def is_checked(checkbox_field):
         return False
 
 
-def extract_characteristics_fields(property_characteristics_table):
+def extract_characteristics_fields(listing):
 
+    characteristics_table = listing.find(id='casa_detalles_sinfoto_centro')
     # Loop through amenity checkbox table elements.
-    property_characteristics_fields = {}
-    for checkbox_field in property_characteristics_table.find_all('td'):
+    characteristics_fields = {}
+    for checkbox_field in characteristics_table.find_all('td'):
 
         # Get name of the amenity.
         amenity_name = checkbox_field.text.strip()
 
         # Determine whether property has the amenity.
         if is_checked(checkbox_field):
-            property_characteristics_fields[amenity_name] = True
+            characteristics_fields[amenity_name] = True
         else:
-            property_characteristics_fields[amenity_name] = False
+            characteristics_fields[amenity_name] = False
 
-    return property_characteristics_fields
+    return characteristics_fields
 
-def extract_contact_fields(property_contact_table):
+
+def extract_contact_fields(listing):
+
+    contact_table = listing.find(id='casa_detalles_sinfoto_derecha')
     # Parse contact name field.
-    contact_name_tag = property_contact_table.find(id='MainPlaceHolder_LabelContacto0')
+    contact_name_tag = contact_table.find(id='MainPlaceHolder_LabelContacto0')
     contact_name = contact_name_tag.text.split(u'Contactar a:\xa0')[1].strip()
 
     # Parse contact number field.
-    contact_phone_tag = property_contact_table.find(id='MainPlaceHolder_ImageTelefono0')
+    contact_phone_tag = contact_table.find(id='MainPlaceHolder_ImageTelefono0')
     if contact_phone_tag is None:
         phone_number = None
     else:
         phone_number = contact_phone_tag['alt']
 
-    # Parse mobile phone field. 
-    contact_mobile_tag = property_contact_table.find(id='MainPlaceHolder_ImageMovil0')
+    # Parse mobile phone field.
+    contact_mobile_tag = contact_table.find(id='MainPlaceHolder_ImageMovil0')
     if contact_mobile_tag is None:
         mobile_number = None
     else:
@@ -180,8 +207,7 @@ def extract_contact_fields(property_contact_table):
 
     # Parse "other info" field.
     # It looks like this: "Otra informacion: -" or "Otra informacion: <free text>"
-    other_info_tag = property_contact_table.find(id='MainPlaceHolder_LabelOtraInfo0')
-    print(other_info_tag)
+    other_info_tag = contact_table.find(id='MainPlaceHolder_LabelOtraInfo0')
     if other_info_tag is None:
         other_info = None
     else:
@@ -191,59 +217,46 @@ def extract_contact_fields(property_contact_table):
         else:
             other_info = other_info_text
 
+    contact_fields = {}
+    contact_fields['contact_name'] = contact_name
+    contact_fields['phone_number'] = phone_number
+    contact_fields['mobile_number'] = mobile_number
+    contact_fields['other_info'] = other_info
+    return contact_fields
 
-    property_contact_fields = {}
-    property_contact_fields['contact_name'] = contact_name
-    property_contact_fields['phone_number'] = phone_number
-    property_contact_fields['mobile_number'] = mobile_number
-    property_contact_fields['other_info'] = other_info
-    return property_contact_fields
 
-def main(listings_dir, listing_file):
-    listings_dir = 'raw/listings'
-    listing_file = 'http://www.cubisima.com/casas/17000-cuc-apartamento-de-2-cuartos-en-la-habana-cerro!56458.htm'.replace('/','_')
-    listing = BeautifulSoup(open(listings_dir + '/' + listing_file))
-    print(listing_file)
-
+def extract_listing_fields(listing):
     # Extract data fields from the "DESCRIPCIÓN DE LA VIVIENDA" table.
     # Example: http://www.cubisima.com/casas/17000-cuc-apartamento-de-2-cuartos-en-la-habana-cerro!56458.htm
     # This left-hard table provides the overview description of the property:
     # number of rooms, price, square footage, location, etc.
-    description_table = listing.find(id='casa_detalles_sinfoto_izquierda')
-    description_fields = extract_description_fields(description_table)
-
-    print(description_fields)
+    description_fields = extract_description_fields(listing)
 
     # Extract data fields from the "CARACTERÍSTICAS" table.
     # This center table is details property amenities using checkboxes:
     # whether property has living room, dining room, telephone, water, etc.
-    characteristics_table = listing.find(id='casa_detalles_sinfoto_centro')
-    characteristics_fields = extract_characteristics_fields(characteristics_table)
-    print(characteristics_fields)
+    characteristics_fields = extract_characteristics_fields(listing)
 
     # Extract data fields from the "DATOS DE LA PERSONA A CONTACTAR" table.
     # This right hand table has the contact info for the listing:
     # Lister name, contact phone number, cellphone, etc.
-    contact_table = listing.find(id='casa_detalles_sinfoto_derecha')
-    contact_fields = extract_contact_fields(contact_table)
-    print(contact_fields)
+    contact_fields = extract_contact_fields(listing)
 
-    # Extract number of the listing.
-    listing_number = listing_file.split('!')[1].replace('.htm', '')
+    # Extract unique id of the listing.
+    listing_id = listing_file.split('!')[1].replace('.htm', '')
 
-    # Assemble final feature vector for property listing.
-    features = {}
-    features['listing_number'] = listing_number
-    features.update(description_fields)
-    features.update(characteristics_fields)
-    features.update(contact_fields)
+    listing_fields = {'id': listing_id, **description_fields, **characteristics_fields, **contact_fields}
 
-    print(features)
+    return listing_fields
 
-    for k, v in features.items():
-        print '%s: %s' % (k, v)
+def main(listings_dir, listing_file):
 
-    # TO DO
+    # listings_dir = 'raw/listings'
+    # listing_file = 'http:__www.cubisima.com_casas_vendo-casa-planta-baja-en-biplanta-reparto-sevillano-llamar-6405034!210.htm'
+    listing = BeautifulSoup(open(listings_dir + '/' + listing_file, mode='r',
+                                 encoding='utf-8'), "html.parser")
+
+    fields = extract_listing_fields(listing)
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2])
