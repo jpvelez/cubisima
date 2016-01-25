@@ -78,8 +78,8 @@ def extract_description_fields(listing, page_type):
 
     # Get number of bed and bath.
     num_bed_and_bath_string = property_type_bed_bath_tag.text.replace(property_type, '')
-    num_bed = int(num_bed_and_bath_string.split()[0])
-    num_bath = int(num_bed_and_bath_string.split()[2])
+    num_bed = float(num_bed_and_bath_string.split()[0].replace('½','.5'))
+    num_bath = float(num_bed_and_bath_string.split()[2].replace('½','.5'))
 
     # Parse price (second) table field.
     # Text to parse: "Precio: 40,000 cuc"
