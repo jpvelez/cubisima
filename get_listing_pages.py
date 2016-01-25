@@ -13,8 +13,6 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 
-logging.basicConfig(filename='scraper.log', level=logging.INFO)
-
 
 def page_has_listings(listings_page):
     """
@@ -33,38 +31,39 @@ def page_has_listings(listings_page):
         return False
 
 
-def main(listings_dir):
-
+def main(listings_dir_base):
+    # Make logs and dirs for listing pages using today's date.
     today_date = datetime.date.today().strftime('%d%m%Y')
+    listings_dir = listings_dir_base + today_date + '/'
+    logging.basicConfig(filename='logs/%s_listing_pages.log' % today_date,
+                        level=logging.INFO)
+    # Make path for listing pages, if it doesn't exist.
+    os.makedirs(listings_dir, exist_ok=True)
 
-    # Make dir for listing pages.
-    os.makedirs(listings_dir + today_date, exist_ok=True)
+    for page_id in range(0, 100000):
+        # Paginate from earliest date to today.
+        listings_page_url = 'http://www.cubisima.com/casas/anuncios/' \
+                            + '%s/?fdate=08072010&sdate=%s' \
+                            % (page_id, today_date)
 
-    # for page_id in range(0, 100000):
+        # Fetch listings page.
+        logging.info('Fetching %s' % listings_page_url)
+        listings_page = requests.get(listings_page_url).text
 
-    #     # Paginate from earliest date to today.
-    #     listings_page_url = 'http://www.cubisima.com/casas/anuncios/' \
-    #                         + '%s/?fdate=08072010&sdate=%s' \
-    #                         % (page_id, today_date)
+        # Save HTML to disk.
+        filename = listings_page_url.replace('http://', '').replace('/', '_')
+        with open(listings_dir + filename, 'w') as f:
+            f.write(listings_page.encode('utf-8'))
 
-        # # Fetch listings page.
-        # logging.info('Fetching %s' % listings_page_url)
-        # listings_page = requests.get(listings_page_url).text
+        # Stop fetching pages when you hit one with no listings.
+        # New listings are added every day to the page with 0,
+        # so older listings are pushed to higher-numbered pages.
+        if not page_has_listings(listings_page):
+            logging.info('This page has no listings. Stopping the fetch.')
+            break
 
-        # # Save HTML to disk.
-        # filename = listings_page_url.replace('http://', '').replace('/', '_')
-        # with open(listings_dir + '/' + filename, 'w') as f:
-        #     f.write(listings_page.encode('utf-8'))
-
-        # # Stop fetching pages when you hit one with no listings.
-        # # New listings are added every day to the page with 0,
-        # # so older listings are pushed to higher-numbered pages.
-        # if not page_has_listings(listings_page):
-        #     logging.info('This page has no listings. Stopping the fetch.')
-        #     break
-
-        # # Don't be a sociopath.
-        # time.sleep(2)
+        # Don't be a sociopath.
+        time.sleep(2)
 
 if __name__ == '__main__':
     main(sys.argv[1])
