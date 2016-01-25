@@ -18,7 +18,7 @@ def strip_dirty_html(listing_text):
     BeautifulSoup's parser - Publishing date and Observations are simply cut
     out of the description table representation.
     By replacing this stray <br> tag, we avoid this problem.'''
-    return listing_text.replace('<br>Publicado', '~Publicado')
+    return listing_text.replace('</br>Publicado', '~Publicado')
 
 
 def get_field_from_tag_id(table, tag_id):
@@ -267,7 +267,8 @@ def extract_listing_fields(listing_file):
 
     return listing_fields
 
-def main(listing_file):
+
+def main(out_row, listing_file):
 
     # Examples of non-photo, photo, and certified listings,
     # to make debugging easier.
@@ -275,10 +276,24 @@ def main(listing_file):
     # listing_file = 'apartamento-de-4-cuartos-145000-cuc-en-miramar-playa-la-habana!286824.htm'
     # listing_file = 'prop-horizontal-de-5-cuartos-75000-cuc-en-calle-cocos-santos-suarez-10-de-octubre-la-habana!106935.htm'
     fields = extract_listing_fields(listing_file)
-    import pprint
-    pp = pprint.PrettyPrinter(indent=1)
-    pp.pprint(fields)
-    print(listing_file.replace('_', '/').replace('raw/listings/', ''), '\n')
+
+    headers = ['azotea compartida', 'balcon', 'modified', 'corriente 220V',
+               'sala-comedor', 'other_info', 'cocina', 'piscina', 'location',
+               'agua las 24 horas', 'near_to', 'garaje', 'gas de balon',
+               'independiente', 'patio', 'contact_name', 'tanque instalado',
+               'bajos', 'telefono', 'placa libre', 'posibilidad de garaje',
+               'pasillo', 'corriente 110V', 'interior', 'meters_squared',
+               'puntal alto', 'num_bed', 'elevador', 'construction_era',
+               'num_bath', 'id', 'azotea libre', 'terraza', 'mobile_number',
+               'price', 'patinejo', 'puerta calle', 'pub_date', 'phone_number',
+               'portal', 'gas de la calle', 'cocina-comedor', 'hall', 'altos',
+               'property_type', 'saleta', 'comedor', 'barbacoa', 'jardin',
+               'notes', 'carposhe', 'sala', 'mod_date']
+    writer = csv.DictWriter(sys.stdout, headers)
+    if out_row == 'header':
+        writer.writeheader()
+    elif out_row == 'fields':
+        writer.writerow(fields)
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2])
