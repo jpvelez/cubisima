@@ -35,37 +35,38 @@ def page_has_listings(listings_page):
 
 def main(listings_dir):
 
+    today_date = datetime.date.today().strftime('%d%m%Y')
+
     # Make dir for listing pages.
     if not os.path.exists(listings_dir):
         logging.info('making %s' % listings_dir)
-        os.makedirs(listings_dir)
+        os.makedirs(listings_dir + '/' + today_date)
 
-    today_date = datetime.date.today().strftime('%d%m%Y')
-    for page_id in range(0, 100000):
+    # for page_id in range(0, 100000):
 
-        # Paginate from earliest date to today.
-        listings_page_url = 'http://www.cubisima.com/casas/anuncios/' \
-                            + '%s/?fdate=08072010&sdate=%s' \
-                            % (page_id, today_date)
+    #     # Paginate from earliest date to today.
+    #     listings_page_url = 'http://www.cubisima.com/casas/anuncios/' \
+    #                         + '%s/?fdate=08072010&sdate=%s' \
+    #                         % (page_id, today_date)
 
-        # Fetch listings page.
-        logging.info('Fetching %s' % listings_page_url)
-        listings_page = requests.get(listings_page_url).text
+        # # Fetch listings page.
+        # logging.info('Fetching %s' % listings_page_url)
+        # listings_page = requests.get(listings_page_url).text
 
-        # Save HTML to disk.
-        filename = listings_page_url.replace('http://', '').replace('/', '_')
-        with open(listings_dir + '/' + filename, 'w') as f:
-            f.write(listings_page.encode('utf-8'))
+        # # Save HTML to disk.
+        # filename = listings_page_url.replace('http://', '').replace('/', '_')
+        # with open(listings_dir + '/' + filename, 'w') as f:
+        #     f.write(listings_page.encode('utf-8'))
 
-        # Stop fetching pages when you hit one with no listings.
-        # New listings are added every day to the page with 0,
-        # so older listings are pushed to higher-numbered pages.
-        if not page_has_listings(listings_page):
-            logging.info('This page has no listings. Stopping the fetch.')
-            break
+        # # Stop fetching pages when you hit one with no listings.
+        # # New listings are added every day to the page with 0,
+        # # so older listings are pushed to higher-numbered pages.
+        # if not page_has_listings(listings_page):
+        #     logging.info('This page has no listings. Stopping the fetch.')
+        #     break
 
-        # Don't be a sociopath.
-        time.sleep(2)
+        # # Don't be a sociopath.
+        # time.sleep(2)
 
 if __name__ == '__main__':
     main(sys.argv[1])
