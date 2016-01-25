@@ -1,4 +1,5 @@
 # Data
+*.htm
 raw/
 
 # Logs
