@@ -1,4 +1,4 @@
-The 2014 scrape downloaded 18601 listings. 
+I have 18,601 of the 63,889 listings from the 2014 scrape downloaded on my machine. 
 
 Assuming 50 listings a listing page, there should be ~64K listings, because there are 1283 listing pages.
 
