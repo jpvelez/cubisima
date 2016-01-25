@@ -52,8 +52,8 @@ def main(listings_dir_base):
 
         # Save HTML to disk.
         filename = listings_page_url.replace('http://', '').replace('/', '_')
-        with open(listings_dir + filename, 'w') as f:
-            f.write(listings_page.encode('utf-8'))
+        with open(listings_dir + filename, mode='w', encoding='utf-8') as f:
+            f.write(listings_page)
 
         # Stop fetching pages when you hit one with no listings.
         # New listings are added every day to the page with 0,
