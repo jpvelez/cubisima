@@ -17,7 +17,8 @@ def strip_dirty_html(listing_text):
     MainPlaceHolder_LabelPublicado tag. This <br> silently breaks
     BeautifulSoup's parser - Publishing date and Observations are simply cut
     out of the description table representation.
-    By replacing this stray <br> tag, we avoid this problem.'''
+    By replacing this stray <br> tag, we avoid this problem.
+    '''
     return listing_text.replace('</br>Publicado', '~Publicado')
 
 
@@ -39,6 +40,8 @@ def extract_description_fields(listing, page_type):
     """
     Extract property type, number of bed and bath, and other features from
     the property descriptions section of a Cubisima listing.
+
+    Location of this table varies by template.
 
     Note: MainPlaceHolder_LabelCantPers* and MainPlaceHolder_LabelEstado*
     tags appear to always be empty.
@@ -77,9 +80,9 @@ def extract_description_fields(listing, page_type):
     property_type = property_type_bed_bath_tag.b.text
 
     # Get number of bed and bath.
-    num_bed_and_bath_string = property_type_bed_bath_tag.text.replace(property_type, '')
-    num_bed = float(num_bed_and_bath_string.split()[0].replace('½','.5'))
-    num_bath = float(num_bed_and_bath_string.split()[2].replace('½','.5'))
+    num_bed_bath = property_type_bed_bath_tag.text.replace(property_type, '')
+    num_bed = float(num_bed_bath.split()[0].replace('½', '.5'))
+    num_bath = float(num_bed_bath.split()[2].replace('½', '.5'))
 
     # Parse price (second) table field.
     # Text to parse: "Precio: 40,000 cuc"
@@ -89,11 +92,14 @@ def extract_description_fields(listing, page_type):
     # Parse meters² field.
     # Text to parse: "Metros²: 235"
     meters_squared_id = 'MainPlaceHolder_LabelMetros%s' % tag_text_modifier
-    meters_squared = get_field_from_tag_id(description_table, meters_squared_id)
+    meters_squared = get_field_from_tag_id(description_table,
+                                           meters_squared_id)
 
     # Parse construction era field.
-    construction_era_id = 'MainPlaceHolder_LabelAno%s' % const_era_tag_text_modifier
-    construction_era = get_field_from_tag_id(description_table, construction_era_id)
+    construction_era_id = 'MainPlaceHolder_LabelAno%s' \
+                          % const_era_tag_text_modifier
+    construction_era = get_field_from_tag_id(description_table,
+                                             construction_era_id)
 
     # Parse location field.
     location_id = 'MainPlaceHolder_LabelDireccion%s' % tag_text_modifier
@@ -105,7 +111,7 @@ def extract_description_fields(listing, page_type):
     near_to = get_field_from_tag_id(description_table, near_to_id)
 
     # Parse published on date and optional modified on fields.
-    # Note: this section wrestles with badly formatted html, and is very brittle.
+    # Note: this section wrestles with badly formatted html, very brittle.
     date_id = 'MainPlaceHolder_LabelPublicado%s' % tag_text_modifier
     if 'Modificado:' in listing.text:
         modified = True
@@ -154,6 +160,14 @@ def is_checked(checkbox_field):
 
 
 def extract_characteristics_fields(listing, page_type):
+    """
+    Extract property 'characteristics' - mostly amenities like
+    pool and electricity, but also the whether the property has
+    a kitchen or living room - from listing.
+
+    Requires parsing table of checkmarks.
+    Location of this table varies by template.
+    """
     if page_type == 'photos':
         table_id = 'renta_detalles_confoto_derecha'
     elif page_type == 'no-photos':
@@ -176,6 +190,12 @@ def extract_characteristics_fields(listing, page_type):
 
 
 def extract_contact_fields(listing, page_type):
+    '''
+    Extract contact info - contact name, phone number, etc -
+    from property listing.
+
+    Location of this table varies by template.
+    '''
     if page_type == 'photos':
         table_id = 'renta_detalles_confoto_derecha'
         tag_text_modifier = ''
@@ -192,21 +212,24 @@ def extract_contact_fields(listing, page_type):
     # Parse contact number field.
     # Note: phone numbers are displayed as images,
     # but actual number is stored in photo's alt attribute.
-    contact_phone_tag = contact_table.find(id='MainPlaceHolder_ImageTelefono%s' % tag_text_modifier)
+    contact_phone_tag = contact_table.find(id='MainPlaceHolder_ImageTelefono%s'
+                                           % tag_text_modifier)
     if contact_phone_tag is None:
         phone_number = None
     else:
         phone_number = contact_phone_tag['alt']
 
     # Parse mobile phone field.
-    contact_mobile_tag = contact_table.find(id='MainPlaceHolder_ImageMovil%s' % tag_text_modifier)
+    contact_mobile_tag = contact_table.find(id='MainPlaceHolder_ImageMovil%s'
+                                            % tag_text_modifier)
     if contact_mobile_tag is None:
         mobile_number = None
     else:
         mobile_number = contact_mobile_tag['alt']
 
     # Parse "other info" field.
-    # It looks like this: "Otra informacion: -" or "Otra informacion: <free text>"
+    # It looks like this: "Otra informacion: -"
+    # or "Otra informacion: <free text>"
     other_info_id = 'MainPlaceHolder_LabelOtraInfo%s' % tag_text_modifier
     other_info = get_field_from_tag_id(contact_table, other_info_id)
 
@@ -234,6 +257,7 @@ def find_page_type(listing):
         else:
             return 'photos'
 
+
 def extract_listing_fields(listing_file):
     # Open and parse listing html into tree.
     listing_text = open(listing_file, mode='r', encoding='utf-8').read()
@@ -245,7 +269,7 @@ def extract_listing_fields(listing_file):
     page_type = find_page_type(listing)
 
     # Extract data fields from the "DESCRIPCIÓN DE LA VIVIENDA" table.
-    # Example: http://www.cubisima.com/casas/17000-cuc-apartamento-de-2-cuartos-en-la-habana-cerro!56458.htm
+    # Example: cubisima.com/casas/17000-cuc-apartamento-de-2-cuartos-en-la-habana-cerro!56458.htm
     # This left-hard table provides the overview description of the property:
     # number of rooms, price, square footage, location, etc.
     description_fields = extract_description_fields(listing, page_type)
@@ -263,7 +287,8 @@ def extract_listing_fields(listing_file):
     # Extract unique id of the listing.
     listing_id = listing_file.split('!')[1].replace('.htm', '')
 
-    listing_fields = {'id': listing_id, **description_fields, **characteristics_fields, **contact_fields}
+    listing_fields = {'id': listing_id, **description_fields,
+                      **characteristics_fields, **contact_fields}
 
     return listing_fields
 
