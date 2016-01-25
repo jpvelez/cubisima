@@ -38,9 +38,7 @@ def main(listings_dir):
     today_date = datetime.date.today().strftime('%d%m%Y')
 
     # Make dir for listing pages.
-    if not os.path.exists(listings_dir):
-        logging.info('making %s' % listings_dir)
-        os.makedirs(listings_dir + '/' + today_date)
+    os.makedirs(listings_dir + today_date, exist_ok=True)
 
     # for page_id in range(0, 100000):
 
