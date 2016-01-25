@@ -1,8 +1,8 @@
 # Run this file to scrape all real estate listings on Cubisima.com.
 
 # Define data dirs
-LISTING_PAGES_DIR="raw/listing_pages/"
-LISTINGS_DIR="raw/listings/"
+LISTING_PAGES_DIR=raw/listing_pages/
+LISTINGS_DIR=raw/listings/
 
 # Get real estate listing pages from Cubisima.com
 raw/listing_pages/complete:
