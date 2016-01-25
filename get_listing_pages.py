@@ -40,7 +40,7 @@ def main(listings_dir_base):
     # Make path for listing pages, if it doesn't exist.
     os.makedirs(listings_dir, exist_ok=True)
 
-    for page_id in range(0, 100000):
+    for page_id in range(531, 100000):
         # Paginate from earliest date to today.
         listings_page_url = 'http://www.cubisima.com/casas/anuncios/' \
                             + '%s/?fdate=08072010&sdate=%s' \
@@ -48,7 +48,9 @@ def main(listings_dir_base):
 
         # Fetch listings page.
         logging.info('Fetching %s' % listings_page_url)
-        listings_page = requests.get(listings_page_url).text
+        response = requests.get(listings_page_url)
+        listings_page = response.text
+        response.connection.close()
 
         # Save HTML to disk.
         filename = listings_page_url.replace('http://', '').replace('/', '_')
@@ -63,7 +65,7 @@ def main(listings_dir_base):
             break
 
         # Don't be a sociopath.
-        time.sleep(2)
+        time.sleep(5)
 
 if __name__ == '__main__':
     main(sys.argv[1])
