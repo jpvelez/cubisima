@@ -19,4 +19,4 @@ listings.csv: raw/listings/complete
 	# Output csv headers first.
 	find $(LISTINGS_DIR) -name 'http*' | head -n1 | xargs -n1 python extract_data_from_listing.py header > $@
 	# Parse listings in parallel. Each listing becomes csv row, appended to single csv file.
-	find $(LISTINGS_DIR) -name 'http*' | parallel --bibtex -n1 python extract_data_from_listing.py fields >> $@
+	find $(LISTINGS_DIR) -name 'http*' | parallel -n1 python extract_data_from_listing.py fields >> $@
