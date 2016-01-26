@@ -1,5 +1,6 @@
 # Data
 *.htm
+*.csv
 raw/
 
 # Logs
