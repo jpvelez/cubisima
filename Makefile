@@ -15,7 +15,8 @@ raw/listings/complete: raw/listing_pages/complete
 	ls $(LISTING_PAGES_DIR) | xargs python get_listings_from_listing_page.py $(LISTING_PAGES_DIR) $(LISTINGS_DIR) && touch $@
 
 # Turn listing documents into single csv dataset.
-listings.csv: raw/listings/complete
+data/listings.csv: raw/listings/complete
+	mkdir -p data
 	# Output csv headers first.
 	find $(LISTINGS_DIR) -name 'http*' | head -n1 | xargs -n1 python extract_data_from_listing.py header > $@
 	# Parse listings in parallel. Each listing becomes csv row, appended to single csv file.
