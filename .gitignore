@@ -2,6 +2,7 @@
 *.htm
 *.csv
 raw/
+*.ipynb_checkpoints
 
 # Logs
 *.log
